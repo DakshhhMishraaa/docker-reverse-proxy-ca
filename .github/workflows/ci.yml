@@ -23,7 +23,6 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -r requirements-test.txt
 
-      
       - name: Start application services
         env:
           POSTGRES_USER: admin
@@ -31,26 +30,37 @@ jobs:
           POSTGRES_DB: ecommerce
         run: docker compose up -d --build
 
-
       - name: Wait for services
         run: |
           for i in {1..30}; do
             if curl -fsS http://localhost:8080/users/ > /dev/null; then
               break
             fi
+            if [ "$i" -eq 30 ]; then
+              echo "Services did not become ready in time"
+              docker compose logs
+              exit 1
+            fi
             sleep 2
           done
-          curl -fsS http://localhost:8080/users/
-          curl -fsS http://localhost:8080/products/
-          curl -fsS http://localhost:8080/orders/
+          curl -fsS http://localhost:8080/products/ > /dev/null
+          curl -fsS http://localhost:8080/orders/ > /dev/null
 
       - name: Run automated tests
         run: python -m pytest -v
 
       - name: Show service logs on failure
         if: failure()
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: ecommerce
         run: docker compose logs
 
       - name: Stop application services
         if: always()
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: ecommerce
         run: docker compose down
