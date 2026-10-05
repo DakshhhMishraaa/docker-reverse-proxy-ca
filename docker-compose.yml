@@ -17,24 +17,45 @@ services:
 
   users:
     build: ./users
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
     networks:
       - backend-network
     expose:
       - "8000"
+    depends_on:
+      database:
+        condition: service_healthy
 
   products:
     build: ./products
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
     networks:
       - backend-network
     expose:
       - "8000"
+    depends_on:
+      database:
+        condition: service_healthy
 
   orders:
     build: ./orders
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
     networks:
       - backend-network
     expose:
       - "8000"
+    depends_on:
+      database:
+        condition: service_healthy
 
   database:
     image: postgres:16
@@ -47,6 +68,13 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - backend-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   proxy-network:
